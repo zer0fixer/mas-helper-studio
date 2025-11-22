@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAS Helper Studio - Sprite JSON Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2a8886;
+            --secondary-color: #b89878;
+            --accent-color: #ff6b9d;
+            --bg-dark: #1a1a1a;
+            --bg-light: #f5f5f5;
+            --text-primary: #333;
+            --text-light: #666;
+            --border-color: #ddd;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --error: #e74c3c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1em;
+            color: var(--secondary-color);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--primary-color);
+        }
+
+        .card h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            font-size: 1.3em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95em;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(42, 136, 134, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background: #217e7c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(42, 136, 134, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-secondary:hover {
+            background: #a88765;
+            transform: translateY(-2px);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9em;
+            flex: none;
+        }
+
+        .output-section {
+            background: #f8f8f8;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px dashed var(--border-color);
+            margin-top: 20px;
+            min-height: 150px;
+        }
+
+        .output-section h3 {
+            color: var(--text-primary);
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .json-display {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.4;
+        }
+
+        .json-display code {
+            color: var(--text-primary);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .alert-info {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-icon {
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            color: var(--text-light);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .guide-section {
+            background: #f0f8ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .guide-section h4 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .guide-section code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: var(--error);
+        }
+
+        .guide-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .guide-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .guide-list li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .pose-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .pose-input {
+            padding: 8px;
+            font-size: 0.85em;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .copy-btn {
+            background: var(--primary-color);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #217e7c;
+        }
+
+        .copy-btn.copied {
+            background: var(--success);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.7);
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .comparison-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+
+        .comparison-item strong {
+            color: var(--primary-color);
+        }
+
+            background: var(--success) !important;
+            animation: buttonPulse 0.6s ease-in-out;
+        }
+
+            background: #1e8449 !important;
+            transform: translateY(-2px);
+        }
+
+        @keyframes buttonPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-success:hover {
+            background: #1e8449;
+            transform: translateY(-2px);
+        }
+
+        .download-section {
+            background: #d4edda;
+            border: 2px solid var(--success);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .download-section.show {
+            display: block;
+        }
+
+        .download-info {
+            font-size: 0.9em;
+            color: #155724;
+            margin-bottom: 10px;
+        }
+
+        .zip-contents {
+            background: white;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.85em;
+        }
+
+        .zip-contents ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .zip-contents li {
+            margin: 4px 0;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 MAS Helper Studio</h1>
+            <p>Generador interactivo de JSONs para Monika After Story</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- LEFT: Formulario -->
+            <div>
+                <div class="card">
+                    <h2><span class="card-icon">📝</span> Información General</h2>
+                    
+                    <div class="form-group">
+                        <label for="spriteType">Tipo de Sprite:</label>
+                        <select id="spriteType" onchange="updateGuide()">
+                            <option value="">-- Selecciona tipo --</option>
+                            <option value="acs">Accesorio (ACS)</option>
+                            <option value="clothes">Ropa (Clothes)</option>
+                            <option value="hair">Cabello (Hair)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="spriteId">ID del Sprite:</label>
+                            <input type="text" id="spriteId" placeholder="ej: my_custom_ribbon" oninput="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="baseName">Nombre Base:</label>
+                            <input type="text" id="baseName" placeholder="ej: ribbon" oninput="updatePreview()">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="giftName">Nombre del Regalo:</label>
+                            <input type="text" id="giftName" placeholder="ej: gift_my_ribbon" oninput="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="displayName">Nombre Visible:</label>
+                            <input type="text" id="displayName" placeholder="ej: Cute Ribbon" oninput="updatePreview()">
+                        </div>
+                    </div>
+
+                    <div id="spriteGuide" class="guide-section" style="display: none;">
+                        <h4>📋 Guía de Nomenclatura</h4>
+                        <div id="guideContent"></div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <h2><span class="card-icon">⚙️</span> Configuración Específica</h2>
+                    
+                    <div id="acsConfig" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="recLayer">Recommended Layer:</label>
+                                <select id="recLayer" onchange="updatePreview()">
+                                    <option value="6">PST (6)</option>
+                                    <option value="8">BSE (8)</option>
+                                    <option value="9">ASE (9)</option>
+                                    <option value="10">PRE (10)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="acsPriority">Priority:</label>
+                                <input type="number" id="acsPriority" value="10" min="1" oninput="updatePreview()">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="acsType">Tipo ACS:</label>
+                            <input type="text" id="acsType" placeholder="ej: ribbon, bow, etc." oninput="updatePreview()">
+                        </div>
+                    </div>
+
+                    <div id="clothesConfig" style="display: none;">
+                        <div class="form-group">
+                            <label for="outfitHair">Cabello Outfit (opcional):</label>
+                            <input type="text" id="outfitHair" placeholder="ej: hair_id" oninput="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="outfitAcs">ACS Outfit (opcional, separado por comas):</label>
+                            <input type="text" id="outfitAcs" placeholder="ej: acs1, acs2, acs3" oninput="updatePreview()">
+                        </div>
+                    </div>
+
+                    <div id="poseMaps" style="display: none;">
+                        <label>Pose Map (p1-p7):</label>
+                        <div class="pose-grid">
+                            <input type="text" class="pose-input" id="p1" placeholder="p1: steepling" oninput="updatePreview()">
+                            <input type="text" class="pose-input" id="p2" placeholder="p2: crossed" oninput="updatePreview()">
+                            <input type="text" class="pose-input" id="p3" placeholder="p3: rest-left" oninput="updatePreview()">
+                            <input type="text" class="pose-input" id="p4" placeholder="p4: point-right" oninput="updatePreview()">
+                            <input type="text" class="pose-input" id="p5" placeholder="p5: leaning" oninput="updatePreview()">
+                            <input type="text" class="pose-input" id="p6" placeholder="p6: down" oninput="updatePreview()">
+                            <input type="text" class="pose-input" id="p7" placeholder="p7: down-left" oninput="updatePreview()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" onclick="generateJSON()">📊 Generar JSON</button>
+                    <button class="btn-success" onclick="downloadZip()" style="display:none;" id="downloadBtn">📦 Descargar ZIP</button>
+                    <button class="btn-secondary" onclick="resetForm()">🔄 Limpiar</button>
+                </div>
+
+                <div id="downloadSection" class="download-section">
+                    <div class="download-info">
+                        ✓ JSON listo para descargar. El ZIP contendrá:
+                    </div>
+                    <div class="zip-contents">
+                        <ul>
+                            <li><strong>Archivo JSON:</strong> Tu sprite configuration</li>
+                            <li><strong>README.txt:</strong> Instrucciones de instalación</li>
+                            <li><strong>NOMENCLATURA_SPRITES.txt:</strong> Guía de nombres de archivos</li>
+                            <li><strong>ESTRUCTURA_CARPETAS.txt:</strong> Estructura recomendada</li>
+                            <li><strong>Carpeta assets/:</strong> Estructura lista para tus sprites PNG</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Preview & Salida -->
+            <div>
+                <div class="card">
+                    <h2><span class="card-icon">👁️</span> Vista Previa</h2>
+
+                    <div class="tab-container">
+                        <button class="tab-btn active" onclick="switchTab('preview')">Resumen</button>
+                        <button class="tab-btn" onclick="switchTab('json')">JSON</button>
+                        <button class="tab-btn" onclick="switchTab('validation')">Validación</button>
+                    </div>
+
+                    <div id="preview" class="tab-content active">
+                        <div id="previewContent">
+                            <p style="color: var(--text-light); text-align: center; padding: 40px 20px;">
+                                Completa el formulario para ver la vista previa
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="json" class="tab-content">
+                        <div class="output-section">
+                            <div id="jsonOutput" class="json-display">
+                                { /* JSON aparecerá aquí */ }
+                            </div>
+                            <button class="copy-btn btn-small" onclick="copyToClipboard()">📋 Copiar JSON</button>
+                        </div>
+                    </div>
+
+                    <div id="validation" class="tab-content">
+                        <div id="validationOutput">
+                            <p style="color: var(--text-light); text-align: center; padding: 20px;">
+                                Genera un JSON para ver validación
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <h2><span class="card-icon">📚</span> Referencias Rápidas</h2>
+                    
+                    <div class="guide-section">
+                        <h4>Poses ACS (7 tipos):</h4>
+                        <div class="guide-list">
+                            <li><strong>p1</strong> - Steepling (manos juntas)</li>
+                            <li><strong>p2</strong> - Crossed (brazos cruzados)</li>
+                            <li><strong>p3</strong> - Rest Left Point Right</li>
+                            <li><strong>p4</strong> - Point Right</li>
+                            <li><strong>p5</strong> - Leaning</li>
+                            <li><strong>p6</strong> - Down (brazos abajo)</li>
+                            <li><strong>p7</strong> - Down Left Point Right</li>
+                        </div>
+                    </div>
+
+                    <div class="guide-section">
+                        <h4>Layers Comunes:</h4>
+                        <div class="comparison-grid">
+                            <div class="comparison-item">
+                                <strong>0:</strong> Body base
+                            </div>
+                            <div class="comparison-item">
+                                <strong>1:</strong> Body adicional
+                            </div>
+                            <div class="comparison-item">
+                                <strong>5:</strong> Arms mid
+                            </div>
+                            <div class="comparison-item">
+                                <strong>10:</strong> Arms front
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>MAS Helper Studio v1.0 | Creado para la comunidad de Monika After Story</p>
+    </footer>
+
+    <script>
+        let currentJSON = {};
+        let lastAssetType = '';
+        let lastAssetId = '';
+
+        function updateGuide() {
+            const type = document.getElementById('spriteType').value;
+            const guideSection = document.getElementById('spriteGuide');
+            const guideContent = document.getElementById('guideContent');
+            const acsConfig = document.getElementById('acsConfig');
+            const clothesConfig = document.getElementById('clothesConfig');
+            const poseMaps = document.getElementById('poseMaps');
+
+            // Reset visibilities
+            acsConfig.style.display = 'none';
+            clothesConfig.style.display = 'none';
+            poseMaps.style.display = 'none';
+            guideSection.style.display = 'none';
+
+            if (!type) return;
+
+            guideSection.style.display = 'block';
+
+            if (type === 'acs') {
+                guideContent.innerHTML = `
+                    <p><strong>Formato de Archivos ACS:</strong></p>
+                    <ul class="guide-list">
+                        <li><code>{id}-p1.png</code> - Pose Steepling</li>
+                        <li><code>{id}-p2.png</code> - Pose Crossed</li>
+                        <li><code>{id}-def.png</code> - Usado para todas las poses si no hay específicos</li>
+                        <li><code>{id}-5.png</code> - Layer 5 (arms)</li>
+                        <li><code>{id}-0^5^10.png</code> - Multi-layer split</li>
+                    </ul>
+                `;
+                acsConfig.style.display = 'block';
+            } else if (type === 'clothes') {
+                guideContent.innerHTML = `
+                    <p><strong>Formato de Archivos CLOTHES:</strong></p>
+                    <ul class="guide-list">
+                        <li><code>{id}-0.png</code> - Body layer 0</li>
+                        <li><code>{id}-1.png</code> - Body layer 1</li>
+                        <li><code>{id}-def-0.png</code> - Leaning pose, layer 0</li>
+                        <li><code>{id}.png</code> - Si es igual para todas las poses</li>
+                    </ul>
+                `;
+                clothesConfig.style.display = 'block';
+            } else if (type === 'hair') {
+                guideContent.innerHTML = `
+                    <p><strong>Formato de Archivos HAIR:</strong></p>
+                    <ul class="guide-list">
+                        <li><code>{id}-back.png</code> - Layer trasera</li>
+                        <li><code>{id}-mid.png</code> - Layer media</li>
+                        <li><code>{id}-front.png</code> - Layer frontal</li>
+                        <li><code>{id}-def-back.png</code> - Leaning pose</li>
+                    </ul>
+                `;
+            }
+
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const type = document.getElementById('spriteType').value;
+            const id = document.getElementById('spriteId').value;
+            const baseName = document.getElementById('baseName').value;
+            const displayName = document.getElementById('displayName').value;
+
+            const previewContent = document.getElementById('previewContent');
+
+            if (!type || !id || !baseName) {
+                previewContent.innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 40px 20px;">⚠️ Completa los campos obligatorios</p>';
+                return;
+            }
+
+            let statusClass = 'status-warning';
+            let statusText = '⚠️ Incompleto';
+
+            if (displayName) {
+                statusClass = 'status-success';
+                statusText = '✓ Listo';
+            }
+
+            previewContent.innerHTML = `
+                <div>
+                    <p><strong>Tipo:</strong> ${type.toUpperCase()}</p>
+                    <p><strong>ID:</strong> <code>${id}</code></p>
+                    <p><strong>Base Name:</strong> <code>${baseName}</code></p>
+                    <p><strong>Display Name:</strong> ${displayName || '<em>No definido</em>'}</p>
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                </div>
+            `;
+        }
+
+        function generateJSON() {
+            const type = document.getElementById('spriteType').value;
+            
+            if (!type) {
+                alert('❌ Selecciona un tipo de sprite');
+                return;
+            }
+
+            if (!document.getElementById('spriteId').value || !document.getElementById('baseName').value) {
+                alert('❌ Completa los campos obligatorios');
+                return;
+            }
+
+            const json = buildJSON(type);
+            currentJSON = json;
+            lastAssetType = type;
+            lastAssetId = document.getElementById('spriteId').value;
+
+            document.getElementById('jsonOutput').textContent = JSON.stringify(json, null, 2);
+            validateJSON(json);
+            
+            // Mostrar botón de descarga y sección de info
+            document.getElementById('downloadBtn').style.display = 'inline-flex';
+            document.getElementById('downloadSection').classList.add('show');
+            
+            switchTab('json');
+        }
+
+        function buildJSON(type) {
+            const base = {
+                "version": 4,
+                "name": document.getElementById('spriteId').value,
+                "img_sit": document.getElementById('baseName').value
+            };
+
+            if (type === 'acs') {
+                base.type = 0;
+                base.pose_map = {
+                    "mpm_type": 0,
+                    "p1": document.getElementById('p1').value || "def",
+                    "p2": document.getElementById('p2').value || "def",
+                    "p3": document.getElementById('p3').value || "def",
+                    "p4": document.getElementById('p4').value || "def",
+                    "p5": document.getElementById('p5').value || "def",
+                    "p6": document.getElementById('p6').value || "def",
+                    "p7": document.getElementById('p7').value || "def"
+                };
+                base.rec_layer = parseInt(document.getElementById('recLayer').value);
+                base.priority = parseInt(document.getElementById('acsPriority').value);
+                if (document.getElementById('acsType').value) {
+                    base.acs_type = document.getElementById('acsType').value;
+                }
+            } else if (type === 'clothes') {
+                base.type = 2;
+                base.pose_map = { "mpm_type": 0 };
+                if (document.getElementById('outfitHair').value) {
+                    base.outfit_hair = document.getElementById('outfitHair').value;
+                }
+                if (document.getElementById('outfitAcs').value) {
+                    base.outfit_acs = document.getElementById('outfitAcs').value.split(',').map(s => s.trim());
+                }
+            } else if (type === 'hair') {
+                base.type = 1;
+                base.pose_map = { "mpm_type": 0 };
+                base.unlock = true;
+            }
+
+            if (document.getElementById('giftName').value) {
+                base.giftname = document.getElementById('giftName').value;
+            }
+
+            if (document.getElementById('displayName').value) {
+                base.select_info = {
+                    "display_name": document.getElementById('displayName').value,
+                    "thumb": "thumbnail_code",
+                    "group": type
+                };
+            }
+
+            return base;
+        }
+
+        function validateJSON(json) {
+            const output = document.getElementById('validationOutput');
+            let html = '<div style="padding: 15px;">';
+
+            const checks = [
+                { pass: !!json.version, msg: '✓ Version definida', type: 'success' },
+                { pass: !!json.type !== undefined, msg: '✓ Type definido', type: 'success' },
+                { pass: !!json.name, msg: '✓ Name (ID) definido', type: 'success' },
+                { pass: !!json.img_sit, msg: '✓ img_sit definido', type: 'success' },
+                { pass: !!json.pose_map, msg: '✓ pose_map definido', type: 'success' },
+                { pass: json.giftname ? true : false, msg: json.giftname ? '✓ giftname definido' : '⚠️ Sin giftname', type: json.giftname ? 'success' : 'warning' },
+                { pass: json.select_info ? true : false, msg: json.select_info ? '✓ select_info definido' : '⚠️ Sin select_info', type: json.select_info ? 'success' : 'warning' }
+            ];
+
+            checks.forEach(check => {
+                const alertClass = check.type === 'success' ? 'alert-info' : 'alert-warning';
+                html += `<div class="alert ${alertClass}"><span class="alert-icon">ℹ️</span><span>${check.msg}</span></div>`;
+            });
+
+            html += '</div>';
+            output.innerHTML = html;
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tab).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function copyToClipboard() {
+            const json = document.getElementById('jsonOutput').textContent;
+            navigator.clipboard.writeText(json).then(() => {
+                const btn = event.target;
+                btn.textContent = '✓ ¡Copiado!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '📋 Copiar JSON';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        function resetForm() {
+            document.querySelectorAll('input, select, textarea').forEach(el => {
+                if (el.type === 'number') el.value = '10';
+                else el.value = '';
+            });
+            document.getElementById('previewContent').innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 40px 20px;">Completa el formulario para ver la vista previa</p>';
+            document.getElementById('jsonOutput').textContent = '{ /* JSON aparecerá aquí */ }';
+            document.getElementById('validationOutput').innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 20px;">Genera un JSON para ver validación</p>';
+            document.getElementById('downloadBtn').style.display = 'none';
+            document.getElementById('downloadSection').classList.remove('show');
+            currentJSON = {};
+        }
+
+        async function downloadZip() {
+            if (!currentJSON || Object.keys(currentJSON).length === 0) {
+                alert('❌ Primero genera un JSON');
+                return;
+            }
+
+            try {
+                const zip = new JSZip();
+                const assetType = lastAssetType;
+                const assetId = lastAssetId;
+                const baseName = document.getElementById('baseName').value;
+
+                // 1. Agregar JSON principal
+                const jsonContent = JSON.stringify(currentJSON, null, 2);
+                zip.file(`${assetId}.json`, jsonContent);
+
+                // 2. Crear estructura de carpetas
+                zip.folder(`assets/${assetType}/${assetId}/sprites`);
+
+                // 3. Agregar README.txt con instrucciones
+                const readme = generateReadme(assetType, assetId, baseName);
+                zip.file("README.txt", readme);
+
+                // 4. Agregar guía de nomenclatura
+                const guide = generateSpriteGuide(assetType, assetId);
+                zip.file("NOMENCLATURA_SPRITES.txt", guide);
+
+                // 5. Agregar estructura de carpetas
+                const exampleStructure = generateExampleStructure(assetType);
+                zip.file("ESTRUCTURA_CARPETAS.txt", exampleStructure);
+
+                // 6. Generar ZIP y descargar
+                const content = await zip.generateAsync({type: "blob"});
+                const url = URL.createObjectURL(content);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${assetId}_MAS_helper_${new Date().getTime()}.zip`;
+                link.click();
+                URL.revokeObjectURL(url);
+
+                alert('✓ ZIP descargado exitosamente\n\nExtrae en tu PC y completa con tus sprites PNG');
+            } catch (error) {
+                alert('❌ Error al generar ZIP: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function generateReadme(type, id, baseName) {
+            return `MAS HELPER STUDIO - SPRITE SETUP
+=====================================
+
+Asset ID: ${id}
+Asset Type: ${type}
+Base Name: ${baseName}
+Generated: ${new Date().toLocaleDateString('es-ES')}
+
+INSTRUCCIONES DE INSTALACIÓN
+=============================
+
+1. DESEMPACA EL ZIP
+   - Descomprime este archivo en tu PC
+   - Verás carpetas y archivos de configuración
+
+2. DESCARGA TUS SPRITES
+   - Coloca las imágenes PNG en: assets/${type}/${id}/sprites/
+   - Sigue exactamente las reglas de NOMENCLATURA_SPRITES.txt
+
+3. COPIAR ARCHIVOS AL MOD
+   - Copia ${id}.json a: mod_assets/monika/j/
+   - Copia los PNG a: game/mod/tu_submod/assets/${type}/${id}/sprites/
+
+4. VERIFICA LA ESTRUCTURA
+   - Consulta ESTRUCTURA_CARPETAS.txt
+   - Asegúrate que las rutas coincidan
+
+5. PRUEBA EN EL JUEGO
+   - Abre Monika After Story
+   - Verifica que tus sprites aparezcan correctamente
+   - Si hay errores, revisa el log de Ren'Py
+
+ERRORES COMUNES
+===============
+• PNG no aparece → Verifica el nombre (mayúsculas/minúsculas)
+• Error en JSON → Compara con el archivo original generado
+• Ruta incorrecta → Revisa ESTRUCTURA_CARPETAS.txt
+
+SOPORTE
+=======
+GitHub: Monika-After-Story/MonikaModDev
+Discord: Comunidad oficial de MAS
+
+=====================================
+Generated with MAS Helper Studio v1.0
+`;
+        }
+
+        function generateSpriteGuide(type, assetId) {
+            let guide = `GUÍA COMPLETA DE NOMENCLATURA - ${type.toUpperCase()}
+${'='.repeat(70)}
+
+Asset ID: ${assetId}
+Generado: ${new Date().toLocaleDateString('es-ES')}
+
+`;
+
+            if (type === 'acs') {
+                guide += `ACCESORIOS (ACS)
+${'='.repeat(70)}
+
+POSES DISPONIBLES (7 tipos):
+• p1 → Steepling (manos juntas)
+• p2 → Crossed (brazos cruzados)
+• p3 → Rest Left Point Right
+• p4 → Point Right
+• p5 → Leaning
+• p6 → Down (brazos abajo)
+• p7 → Down Left Point Right
+
+LAYERS COMUNES:
+• 0  → Body base
+• 1  → Body adicional
+• 5  → Arms media
+• 10 → Arms frontal
+
+EJEMPLOS CORRECTOS:
+${'-'.repeat(70)}
+✓ ${assetId}-def.png          (Mismo para todas las poses)
+✓ ${assetId}-p1.png           (Solo pose 1)
+✓ ${assetId}-p1-5.png         (Pose 1, layer 5)
+✓ ${assetId}-p1-0^5^10.png    (Pose 1, múltiples layers)
+
+ERRORES A EVITAR:
+${'-'.repeat(70)}
+✗ ${assetId}-steepling.png    (Usa p1, no el nombre completo)
+✗ ${assetId}-P1.png           (Cuidado: mayúsculas)
+✗ ${assetId} p1.png           (No uses espacios)
+✗ ${assetId}-pose1.png        (Es p1, no pose1)
+
+RECOMENDACIONES:
+${'-'.repeat(70)}
+→ Usa siempre minúsculas
+→ No dejes espacios en nombres
+→ Los PNG deben tener transparencia (PNG32)
+→ Resolución estándar: 1280x1224 px
+→ Prueba en el juego después de instalar
+
+`;
+            } else if (type === 'clothes') {
+                guide += `ROPA (CLOTHES)
+${'='.repeat(70)}
+
+POSES:
+• upright → Pose normal
+• leaning → Pose inclinada (se especifica con "def")
+
+LAYERS:
+• 0 → Cuerpo base
+• 1 → Cuerpo adicional
+
+EJEMPLOS CORRECTOS:
+${'-'.repeat(70)}
+✓ ${assetId}-0.png       (Upright, layer 0)
+✓ ${assetId}-def-0.png   (Leaning, layer 0)
+✓ ${assetId}-1.png       (Layer 1)
+✓ ${assetId}-def-1.png   (Leaning, layer 1)
+
+ERRORES A EVITAR:
+${'-'.repeat(70)}
+✗ ${assetId}-leaning-0.png    (Usa "def", no "leaning")
+✗ ${assetId}-2.png            (Solo 0 y 1)
+✗ ${assetId}.png.png          (Extensión duplicada)
+
+ESTRUCTURA TÍPICA:
+${'-'.repeat(70)}
+assets/clothes/${assetId}/sprites/
+├── ${assetId}-0.png
+├── ${assetId}-1.png
+├── ${assetId}-def-0.png
+└── ${assetId}-def-1.png
+
+`;
+            } else if (type === 'hair') {
+                guide += `CABELLO (HAIR)
+${'='.repeat(70)}
+
+LAYERS (3 tipos):
+• back  → Capa trasera (atrás del cuerpo)
+• mid   → Capa media
+• front → Capa frontal (enfrente)
+
+EJEMPLOS CORRECTOS:
+${'-'.repeat(70)}
+✓ ${assetId}-back.png      (Upright)
+✓ ${assetId}-def-back.png  (Leaning)
+✓ ${assetId}-mid.png
+✓ ${assetId}-front.png
+
+ALTERNATIVA CON NÚMEROS:
+${'-'.repeat(70)}
+✓ ${assetId}-0.png        (back)
+✓ ${assetId}-5.png        (mid)
+✓ ${assetId}-10.png       (front)
+
+ERRORES A EVITAR:
+${'-'.repeat(70)}
+✗ ${assetId}-top.png        (Usa back, mid, front)
+✗ ${assetId}-layer1.png     (Usa números)
+✗ ${assetId}-def-back.png   (Si no hay 'def' para leaning)
+
+`;
+            }
+
+            guide += `\nTIPS FINALES
+${'='.repeat(70)}
+1. Todos los PNG deben tener fondo transparente
+2. Verifica EXACTITUD de nombres (mayúsculas/minúsculas importan)
+3. Resolución debe coincidir con sprites base
+4. Prueba en el juego para verificar posicionamiento
+5. Si algo no aparece, verifica primero el nombre del archivo
+
+Generado con MAS Helper Studio
+Última actualización: ${new Date().toLocaleDateString('es-ES')}
+`;
+
+            return guide;
+        }
+
+        function generateExampleStructure(type) {
+            return `ESTRUCTURA DE CARPETAS RECOMENDADA
+${'='.repeat(70)}
+
+MÍNIMA:
+${'-'.repeat(70)}
+
+tu_mod/
+├── mod_assets/
+│   └── monika/
+│       └── j/
+│           └── tu_asset_id.json
+
+└── game/
+    └── mod/
+        └── submod_your_name/
+            └── assets/
+                └── ${type}/
+                    └── tu_asset_id/
+                        └── sprites/    ← Tus PNG aquí
+
+
+COMPLETA (Recomendada):
+${'-'.repeat(70)}
+
+tu_submod/
+├── README.md
+├── LICENSE
+├── game/
+│   ├── screens.rpy
+│   └── mod/
+│       └── submod_your_name/
+│           ├── __init__.py
+│           ├── sprites.rpy
+│           └── assets/
+│               ├── acs/
+│               │   └── tu_asset_id/
+│               │       └── sprites/
+│               │           ├── tu_asset_id-p1.png
+│               │           ├── tu_asset_id-p2.png
+│               │           └── ...
+│               └── clothes/
+│                   └── tu_outfit/
+│                       └── sprites/
+│
+├── mod_assets/
+│   └── monika/
+│       └── j/
+│           ├── tu_asset_id.json
+│           └── otros_assets.json
+│
+└── python-packages/
+    └── (si necesitas dependencias)
+
+
+PUNTOS CLAVE
+${'-'.repeat(70)}
+✓ JSON siempre en: mod_assets/monika/j/
+✓ PNG siempre en: game/mod/TUMOD/assets/TIPO/ID/sprites/
+✓ Los nombres deben coincidir exactamente
+✓ Las rutas son CASE-SENSITIVE (distinguen mayúsculas)
+
+
+VERIFICACIÓN ANTES DE INSTALAR
+${'-'.repeat(70)}
+□ JSON existe en mod_assets/monika/j/
+□ PNG nombrados correctamente
+□ Rutas coinciden entre JSON y archivos
+□ Todos los PNG tienen transparencia
+□ Extensión es .png (no .jpg u otro)
+
+
+Generado con MAS Helper Studio v1.0
+`;
+        }
+    </script>
+</body>
+</html>
