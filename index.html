@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAS Sprite Studio</title>
+    
+    <!-- 1. ESTILOS: Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. MAPA DE IMPORTACIONES: Dice al navegador dónde buscar las librerías -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.263.1",
+            "jszip": "https://esm.sh/jszip@3.10.1"
+        }
+    }
+    </script>
+
+    <!-- 3. BABEL: Permite escribir código React (JSX) directamente aquí -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Ajustes extra para scrollbar oscura */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-[#121212] text-slate-200 font-sans">
+    <div id="root"></div>
+
+    <!-- 4. TU CÓDIGO DE LA APP -->
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+            Gift, Save, User, Shirt, Scissors, Terminal, Download, 
+            Package, Loader, Layers, MessageSquare, Tag, Settings, 
+            CheckCircle, Coffee, Layout, Eye, AlertTriangle, Info,
+            BookOpen, X, Shield, Lock, Sparkles
+        } from 'lucide-react';
+        import JSZip from 'jszip';
+
+        // === 1. PRESETS PRINCIPALES ===
+        const ITEM_PRESETS = {
+            clothes: {
+                label: "Ropa (Clothes)",
+                type: 0,
+                acs_type: null,
+                default_group: "clothes",
+                rec_layer: 0,
+                priority: 0,
+                icon: <Shirt size={24} />,
+                examples: {
+                    id: "ej. vestido_fiesta_azul",
+                    name: "ej. Vestido de Fiesta Azul",
+                    gift: "vestidoazul"
+                }
+            },
+            hair: {
+                label: "Pelo (Hair)",
+                type: 2, 
+                acs_type: null,
+                default_group: "hair", 
+                rec_layer: 5,
+                priority: 0,
+                icon: <Sparkles size={24} />,
+                examples: {
+                    id: "ej. cabello_largo_rubio",
+                    name: "ej. Cabello Largo Rubio",
+                    gift: "" // No aplica
+                }
+            },
+            objects_acs: {
+                label: "Objetos (ACS)",
+                type: 1, 
+                acs_type: "ribbon",
+                default_group: "ribbon",
+                rec_layer: 10,
+                priority: 10,
+                stay_on_start: false,
+                keep_on_desk: false,
+                icon: <Scissors size={24} />,
+                examples: {
+                    id: "ej. lazo_rojo_grande",
+                    name: "ej. Lazo Rojo Grande",
+                    gift: "lazorojo"
+                }
+            }
+        };
+
+        // === 2. SELECTORES OFICIALES MAS ===
+        const MAS_OFFICIAL_SELECTORS = [
+            { id: 'ribbon', label: 'Lazo (Ribbon)', group: 'ribbon', acs_type: 'ribbon', type: 1 },
+            { id: 'choker', label: 'Gargantilla (Choker)', group: 'choker', acs_type: 'choker', type: 0 },
+            { id: 'lclip', label: 'Broche Izq. (Left Clip)', group: 'left-hair-clip', acs_type: 'left-hair-clip', type: 0 },
+            { id: 'flower', label: 'Flor (Flower)', group: 'flower', acs_type: 'flower', type: 0 },
+            { id: 'mug', label: 'Taza (Mug)', group: 'mug', acs_type: 'mug', type: 0 },
+        ];
+
+        // === 3. SELECTORES MJ ===
+        const MJ_SELECTORS = [
+            { id: 'ahoge', label: 'Ahoge (Pelo)', group: 'ahoge_acs', acs_type: 'ahoge_acs' },
+            { id: 'back', label: 'Espalda (Backpiece)', group: 'backpiece_acs', acs_type: 'backpiece_acs' },
+            { id: 'body', label: 'Tatuaje Cuerpo', group: 'body_tattoo_acs', acs_type: 'body_tattoo_acs' },
+            { id: 'brace', label: 'Pulsera (Bracelet)', group: 'bracelet_acs', acs_type: 'bracelet_acs' },
+            { id: 'ear', label: 'Oído (Earpiece)', group: 'earpiece_acs', acs_type: 'earpiece_acs' },
+            { id: 'face', label: 'Cara (Facepaint)', group: 'facepaint_acs', acs_type: 'facepaint_acs' },
+            { id: 'glass', label: 'Gafas (Glasses)', group: 'glasses_acs', acs_type: 'glasses_acs' },
+            { id: 'glove', label: 'Guantes', group: 'gloves_acs', acs_type: 'gloves_acs' },
+            { id: 'head', label: 'Cabeza (Headpiece)', group: 'headpiece_acs', acs_type: 'headpiece_acs' },
+            { id: 'mask', label: 'Máscara', group: 'mask_acs', acs_type: 'mask_acs' },
+            { id: 'nail', label: 'Uñas (Nailpolish)', group: 'nailpolish_acs', acs_type: 'nailpolish_acs' },
+            { id: 'pin', label: 'Pin/Broche', group: 'pin_acs', acs_type: 'pin_acs' },
+            { id: 'ring', label: 'Anillo (Ring)', group: 'ring_acs', acs_type: 'ring_acs' },
+            { id: 'l_arm', label: 'Tatuaje Brazo Izq.', group: 'left_arm_tattoo_acs', acs_type: 'left_arm_tattoo_acs' },
+            { id: 'r_arm', label: 'Tatuaje Brazo Der.', group: 'right_arm_tattoo_acs', acs_type: 'right_arm_tattoo_acs' },
+            { id: 'table', label: 'Mesa (Table ACS)', group: 'table_acs', acs_type: 'table_acs' },
+        ];
+
+        function SpriteStudio() {
+            // === ESTADOS GLOBALES ===
+            const [username, setUsername] = useState('Usuario');
+            const [author, setAuthor] = useState('');
+            
+            // === ESTADOS DEL ITEM ===
+            const [selectedPreset, setSelectedPreset] = useState('clothes');
+            const [internalName, setInternalName] = useState('');
+            const [displayName, setDisplayName] = useState('');
+            const [giftname, setGiftname] = useState('');
+            const [description, setDescription] = useState('');
+            
+            // === ESTADOS TÉCNICOS ===
+            const [recLayer, setRecLayer] = useState(0);
+            const [priority, setPriority] = useState(0);
+            const [exclList, setExclList] = useState('');
+            const [stayOnStart, setStayOnStart] = useState(false);
+            const [keepOnDesk, setKeepOnDesk] = useState(false);
+            const [acsTypeOverride, setAcsTypeOverride] = useState(''); 
+            const [typeOverride, setTypeOverride] = useState(null); 
+            
+            // === DIÁLOGOS Y EXTRAS ===
+            const [selectDlg, setSelectDlg] = useState(''); 
+            const [groupName, setGroupName] = useState(''); 
+            const [activeModal, setActiveModal] = useState(null); 
+            
+            // === ESTADOS DE SALIDA ===
+            const [jsonOutput, setJsonOutput] = useState('');
+            const [isReady, setIsReady] = useState(false);
+            const [isZipping, setIsZipping] = useState(false);
+
+            // Efecto: Cargar valores del preset al cambiar
+            useEffect(() => {
+                const preset = ITEM_PRESETS[selectedPreset];
+                setRecLayer(preset.rec_layer);
+                setPriority(preset.priority);
+                setStayOnStart(preset.stay_on_start || false);
+                setKeepOnDesk(preset.keep_on_desk || false);
+                setAcsTypeOverride('');
+                setTypeOverride(null); 
+                
+                if (preset.default_group) {
+                    setGroupName(preset.default_group);
+                } else {
+                    setGroupName("");
+                }
+            }, [selectedPreset]);
+
+            // Efecto: Generar JSON en tiempo real
+            useEffect(() => {
+                generateJSON();
+            }, [username, author, selectedPreset, internalName, displayName, giftname, description, recLayer, priority, exclList, stayOnStart, keepOnDesk, selectDlg, groupName, acsTypeOverride, typeOverride]);
+
+            const generateJSON = () => {
+                if (!internalName) {
+                    setJsonOutput('// Define un ID interno para comenzar...');
+                    setIsReady(false);
+                    return;
+                }
+
+                const preset = ITEM_PRESETS[selectedPreset];
+                const finalGiftName = giftname || internalName.replace(/_/g, ''); 
+
+                let data = {
+                    __author: author || username,
+                    version: 3, 
+                    type: typeOverride !== null ? typeOverride : preset.type, 
+                    name: internalName,
+                    img_sit: internalName, 
+                    pose_map: { "default": "0", "l_default": "0" }
+                };
+
+                if (acsTypeOverride) {
+                    data.acs_type = acsTypeOverride;
+                } else if (preset.acs_type) {
+                    data.acs_type = preset.acs_type;
+                }
+
+                if (recLayer !== 0) data.rec_layer = parseInt(recLayer);
+                if (priority !== 0) data.priority = parseInt(priority);
+                if (stayOnStart) data.stay_on_start = true;
+                if (keepOnDesk) data.keep_on_desk = true;
+                if (exclList.trim()) data.excl_list = exclList.split(',').map(s => s.trim());
+
+                data.select_info = {
+                    display_name: displayName || internalName,
+                    thumb: internalName, 
+                    group: groupName || "uncategorized"
+                };
+
+                if (selectDlg.trim()) {
+                    const lines = selectDlg.split('\n').filter(line => line.trim() !== '');
+                    data.select_info.select_dlg = lines;
+                }
+
+                if (description) data.dlg_desc = description;
+                
+                // LOGICA HAIR VS GIFT
+                if (selectedPreset === 'hair') {
+                    data.unlock = true;
+                } else {
+                    data.giftname = finalGiftName;
+                }
+
+                setJsonOutput(JSON.stringify(data, null, 4));
+                setIsReady(true);
+            };
+
+            const applySelector = (item) => {
+                setGroupName(item.group);
+                setAcsTypeOverride(item.acs_type);
+                if (item.type !== undefined) setTypeOverride(item.type);
+                if (item.id === 'table') {
+                    setKeepOnDesk(true);
+                    setStayOnStart(true);
+                    setRecLayer(2); 
+                }
+                setActiveModal(null);
+            };
+
+            const handleDownloadZip = async () => {
+                if (!isReady) return;
+                setIsZipping(true);
+
+                try {
+                    const zip = new JSZip();
+                    const preset = ITEM_PRESETS[selectedPreset];
+                    
+                    let categoryPath = 'a';
+                    if (selectedPreset === 'clothes') categoryPath = 'c';
+                    if (selectedPreset === 'hair') categoryPath = 'h';
+
+                    const safeGiftName = giftname || internalName.replace(/_/g, '');
+
+                    // SOLO Generar .gift si NO es hair
+                    if (selectedPreset !== 'hair') {
+                        zip.file(`characters/${safeGiftName}.gift`, "");
+                    }
+                    
+                    zip.file(`game/mod_assets/monika/${categoryPath}/${internalName}.json`, jsonOutput);
+
+                    const readme = `MAS ASSET PACK: ${displayName}\n\n` +
+                        `ID: ${internalName}\n` +
+                        `TIPO: ${acsTypeOverride || preset.label}\n` +
+                        `GRUPO: ${groupName}\n\n` +
+                        `IMPORTANTE:\n` +
+                        `Coloca tus imágenes PNG aquí: game/mod_assets/monika/${categoryPath}/${internalName}/\n` +
+                        `Los archivos deben llamarse como el "img_sit" definido en el JSON (por defecto: ${internalName}.png).`;
+                    
+                    zip.file(`game/mod_assets/monika/${categoryPath}/${internalName}/LEEME_Instrucciones.txt`, readme);
+
+                    const content = await zip.generateAsync({ type: "blob" });
+                    const url = window.URL.createObjectURL(content);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `MAS_Pack_${internalName}.zip`;
+                    document.body.appendChild(link);
+                    link.click();
+                    window.URL.revokeObjectURL(url);
+
+                } catch (e) {
+                    alert("Error generando ZIP: " + e.message);
+                } finally {
+                    setIsZipping(false);
+                }
+            };
+
+            // === RENDER ===
+            return (
+                <div className="max-w-7xl mx-auto p-4 md:p-8">
+                    
+                    {/* HEADER */}
+                    <header className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-slate-800 pb-6">
+                        <div className="flex items-center gap-4 mb-4 md:mb-0">
+                            <div className="bg-gradient-to-tr from-green-600 to-teal-600 p-3 rounded-xl shadow-lg shadow-green-900/30">
+                                <Gift className="w-8 h-8 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-teal-400">
+                                    MAS Sprite Studio
+                                </h1>
+                                <p className="text-slate-500 text-sm">Generador Profesional de JSONs y Assets</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <div className="bg-slate-900 px-4 py-2 rounded-lg border border-slate-700 flex flex-col">
+                                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Usuario</span>
+                                <input 
+                                    type="text" 
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="bg-transparent border-none outline-none text-sm text-green-400 font-mono w-32"
+                                />
+                            </div>
+                            <div className="bg-slate-900 px-4 py-2 rounded-lg border border-slate-700 flex flex-col">
+                                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Autor</span>
+                                <input 
+                                    type="text" 
+                                    value={author}
+                                    onChange={(e) => setAuthor(e.target.value)}
+                                    placeholder="Igual a usuario"
+                                    className="bg-transparent border-none outline-none text-sm text-blue-400 font-mono w-32"
+                                />
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        
+                        {/* === COLUMNA IZQUIERDA: CONFIGURACIÓN (7 cols) === */}
+                        <div className="lg:col-span-7 space-y-6">
+                            
+                            {/* 1. PRESETS */}
+                            <div className="bg-[#1e1e1e] rounded-xl p-5 border border-slate-800 shadow-xl">
+                                <h2 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                                    <Layout size={16} /> 1. Categoría Principal
+                                </h2>
+                                <div className="grid grid-cols-3 gap-4">
+                                    {Object.entries(ITEM_PRESETS).map(([key, preset]) => (
+                                        <button
+                                            key={key}
+                                            onClick={() => setSelectedPreset(key)}
+                                            className={`flex flex-col items-center justify-center p-4 rounded-lg border transition-all hover:scale-[1.02] active:scale-95 ${
+                                                selectedPreset === key 
+                                                    ? 'bg-green-600/20 border-green-500 text-green-400 shadow-lg shadow-green-900/20' 
+                                                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+                                            }`}
+                                        >
+                                            <div className="mb-3">{preset.icon}</div>
+                                            <span className="text-sm font-bold text-center">{preset.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 2. DATOS BÁSICOS */}
+                            <div className="bg-[#1e1e1e] rounded-xl p-5 border border-slate-800 shadow-xl">
+                                <h2 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                                    <Tag size={16} /> 2. Identificación
+                                </h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="col-span-1">
+                                        <label className="text-xs text-slate-500 mb-1 block">ID Interno (Sin espacios)</label>
+                                        <input 
+                                            type="text" 
+                                            value={internalName}
+                                            onChange={(e) => setInternalName(e.target.value.replace(/\s+/g, '_').toLowerCase())}
+                                            className="w-full bg-black/30 border border-slate-700 rounded p-2 text-white font-mono focus:border-green-500 outline-none"
+                                            placeholder={ITEM_PRESETS[selectedPreset].examples.id}
+                                        />
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="text-xs text-slate-500 mb-1 block">Nombre Visible (Display Name)</label>
+                                        <input 
+                                            type="text" 
+                                            value={displayName}
+                                            onChange={(e) => setDisplayName(e.target.value)}
+                                            className="w-full bg-black/30 border border-slate-700 rounded p-2 text-white focus:border-green-500 outline-none"
+                                            placeholder={ITEM_PRESETS[selectedPreset].examples.name}
+                                        />
+                                    </div>
+                                    
+                                    {selectedPreset !== 'hair' && (
+                                    <div className="col-span-2">
+                                        <label className="text-xs text-slate-500 mb-1 block flex justify-between">
+                                            <span>Nombre del archivo .gift</span>
+                                            <span className="text-[10px] text-yellow-500">Lo que el usuario pone en /characters</span>
+                                        </label>
+                                        <div className="flex items-center bg-black/30 border border-slate-700 rounded px-2">
+                                            <input 
+                                                type="text" 
+                                                value={giftname}
+                                                onChange={(e) => setGiftname(e.target.value.replace(/\s+/g, '').toLowerCase())}
+                                                className="w-full bg-transparent border-none outline-none py-2 text-yellow-400 font-mono text-sm"
+                                                placeholder={internalName ? internalName.replace(/_/g, '') : ITEM_PRESETS[selectedPreset].examples.gift}
+                                            />
+                                            <span className="text-slate-500 text-sm select-none">.gift</span>
+                                        </div>
+                                    </div>
+                                    )}
+
+                                    {selectedPreset === 'hair' && (
+                                        <div className="col-span-2 bg-blue-900/20 border border-blue-700/50 p-3 rounded flex items-center gap-3">
+                                            <Info className="text-blue-400 shrink-0" size={18} />
+                                            <p className="text-xs text-blue-200">
+                                                El cabello utiliza <code>"unlock": true</code> por defecto. <br/>
+                                                No requiere archivo <strong>.gift</strong> para instalarse.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 3. PARÁMETROS TÉCNICOS */}
+                            <div className="bg-[#1e1e1e] rounded-xl p-5 border border-slate-800 shadow-xl">
+                                <h2 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                                    <Settings size={16} /> 3. Parámetros MAS (Avanzado)
+                                </h2>
+                                
+                                <div className="grid grid-cols-2 gap-6 mb-4">
+                                    <div>
+                                        <label className="text-xs text-slate-500 mb-1 block">Layer (rec_layer)</label>
+                                        <input 
+                                            type="number" 
+                                            value={recLayer}
+                                            onChange={(e) => setRecLayer(e.target.value)}
+                                            className="w-full bg-black/30 border border-slate-700 rounded p-2 text-blue-300 font-mono"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-slate-500 mb-1 block">Priority</label>
+                                        <input 
+                                            type="number" 
+                                            value={priority}
+                                            onChange={(e) => setPriority(e.target.value)}
+                                            className="w-full bg-black/30 border border-slate-700 rounded p-2 text-purple-300 font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 border-t border-slate-800 pt-4">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-slate-300">Stay On Start (Persistente)</span>
+                                        <div 
+                                            onClick={() => setStayOnStart(!stayOnStart)}
+                                            className={`w-10 h-5 rounded-full cursor-pointer relative transition-colors ${stayOnStart ? 'bg-green-600' : 'bg-slate-700'}`}
+                                        >
+                                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${stayOnStart ? 'left-6' : 'left-1'}`}></div>
+                                        </div>
+                                    </div>
+                                    
+                                    {selectedPreset === 'objects_acs' && (
+                                    <div className="flex items-center justify-between animate-fade-in">
+                                        <span className="text-sm text-slate-300">Keep On Desk (Solo Mesa)</span>
+                                        <div 
+                                            onClick={() => setKeepOnDesk(!keepOnDesk)}
+                                            className={`w-10 h-5 rounded-full cursor-pointer relative transition-colors ${keepOnDesk ? 'bg-green-600' : 'bg-slate-700'}`}
+                                        >
+                                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${keepOnDesk ? 'left-6' : 'left-1'}`}></div>
+                                        </div>
+                                    </div>
+                                    )}
+                                </div>
+                                <div className="mt-4">
+                                    <label className="text-xs text-slate-500 mb-1 block">Excluir (excl_list)</label>
+                                    <input 
+                                        type="text" 
+                                        value={exclList}
+                                        onChange={(e) => setExclList(e.target.value)}
+                                        className="w-full bg-black/30 border border-slate-700 rounded p-2 text-slate-300 text-sm"
+                                        placeholder="ej. acs_ribbon, acs_hat"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 4. DIÁLOGO Y GRUPO */}
+                            <div className="bg-[#1e1e1e] rounded-xl p-5 border border-slate-800 shadow-xl">
+                                <h2 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                                    <MessageSquare size={16} /> 4. Interacción y Grupo
+                                </h2>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs text-slate-500 mb-1 block flex justify-between">
+                                            <span>Frase de Selección (Monika)</span>
+                                        </label>
+                                        <textarea 
+                                            value={selectDlg}
+                                            onChange={(e) => setSelectDlg(e.target.value)}
+                                            className="w-full bg-black/30 border border-slate-700 rounded p-2 text-slate-300 text-sm h-24 resize-none focus:border-green-500 outline-none"
+                                            placeholder="¿Es un regalo nuevo?&#10;¡Gracias! Me encanta."
+                                        />
+                                    </div>
+                                    
+                                    <div className="relative">
+                                        <div className="flex justify-between items-end mb-2">
+                                            <label className="text-xs text-slate-500 block">Grupo de Menú (Selector)</label>
+                                            
+                                            {selectedPreset !== 'clothes' && selectedPreset !== 'hair' && (
+                                                <div className="flex gap-2">
+                                                    <button 
+                                                        onClick={() => setActiveModal('mas')}
+                                                        className="text-[10px] bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded flex items-center gap-1 transition-colors border border-slate-600"
+                                                    >
+                                                        <Shield size={10} /> MAS Oficial
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setActiveModal('mj')}
+                                                        className="text-[10px] bg-purple-600 hover:bg-purple-500 text-white px-2 py-1 rounded flex items-center gap-1 transition-colors"
+                                                    >
+                                                        <BookOpen size={10} /> MJ Selectors
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="relative">
+                                            <input 
+                                                type="text" 
+                                                value={groupName}
+                                                readOnly
+                                                className={`w-full bg-black/20 border border-slate-700 rounded p-2 text-slate-400 text-sm font-mono cursor-not-allowed pr-8`}
+                                            />
+                                            <Lock size={12} className="absolute right-3 top-3 text-slate-600"/>
+                                        </div>
+                                        
+                                        {selectedPreset !== 'clothes' && selectedPreset !== 'hair' && (
+                                            <p className="text-[10px] text-slate-600 mt-1 italic">
+                                                * Usa los botones de arriba para cambiar el tipo de accesorio.
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* === COLUMNA DERECHA: VISOR Y DESCARGA === */}
+                        <div className="lg:col-span-5 flex flex-col gap-6 sticky top-6 h-fit">
+                            
+                            {/* JSON VIEWER */}
+                            <div className="bg-[#1a1a1a] rounded-xl border border-slate-700 overflow-hidden flex flex-col shadow-2xl">
+                                <div className="bg-[#252525] px-4 py-3 border-b border-slate-700 flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                                    </div>
+                                    <span className="text-xs font-mono text-slate-500">{internalName || 'untitled'}.json</span>
+                                </div>
+                                <div className="p-4 bg-[#151515] overflow-auto max-h-[500px] min-h-[300px] relative group">
+                                    <button 
+                                        onClick={() => navigator.clipboard.writeText(jsonOutput)}
+                                        className="absolute top-4 right-4 bg-slate-800 p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-700"
+                                    >
+                                        <Layers size={14} className="text-white"/>
+                                    </button>
+                                    <pre className="text-xs font-mono leading-relaxed">
+                                        <code dangerouslySetInnerHTML={{
+                                            __html: jsonOutput
+                                                .replace(/"key":/g, '<span class="text-purple-400">"key":</span>')
+                                                .replace(/: "([^"]+)"/g, ': <span class="text-green-400">"$1"</span>')
+                                                .replace(/: (\d+)/g, ': <span class="text-orange-400">$1</span>')
+                                                .replace(/: (true|false)/g, ': <span class="text-blue-400">$1</span>')
+                                        }} />
+                                    </pre>
+                                </div>
+                            </div>
+
+                            {/* PANEL DE DESCARGA */}
+                            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
+                                <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                    <Package size={20} className="text-green-500" /> Exportar Pack
+                                </h3>
+                                <p className="text-xs text-slate-400 mb-6">
+                                    Genera ZIP listo para MAS. Incluye .gift y estructura de assets.
+                                </p>
+
+                                <button 
+                                    onClick={handleDownloadZip}
+                                    disabled={!isReady || isZipping}
+                                    className={`w-full py-4 rounded-lg font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-3 transition-all ${
+                                        isReady 
+                                            ? 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/50 cursor-pointer transform hover:-translate-y-1' 
+                                            : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                                    }`}
+                                >
+                                    {isZipping ? (
+                                        <><Loader size={18} className="animate-spin"/> Empaquetando...</>
+                                    ) : (
+                                        <><Download size={18}/> Descargar ZIP Completo</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* === MODAL GENERAL === */}
+                    {activeModal && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                            <div className="bg-[#1e1e1e] border border-slate-700 rounded-2xl max-w-2xl w-full shadow-2xl max-h-[80vh] overflow-hidden flex flex-col animate-fade-in">
+                                
+                                <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-[#252525]">
+                                    <div>
+                                        <h3 className="text-xl font-bold flex items-center gap-2">
+                                            {activeModal === 'mas' ? (
+                                                <><Shield size={24} className="text-blue-400" /> Selectores Oficiales MAS</>
+                                            ) : (
+                                                <><BookOpen size={24} className="text-purple-400" /> MJ Selectors (Comunidad)</>
+                                            )}
+                                        </h3>
+                                        <p className="text-sm text-slate-400">
+                                            {activeModal === 'mas' 
+                                                ? 'Tipos de accesorios nativos del juego base.'
+                                                : 'Tipos extendidos soportados por submods populares.'}
+                                        </p>
+                                    </div>
+                                    <button onClick={() => setActiveModal(null)} className="text-slate-500 hover:text-white transition-colors">
+                                        <X size={24} />
+                                    </button>
+                                </div>
+
+                                <div className="p-6 overflow-y-auto grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    {(activeModal === 'mas' ? MAS_OFFICIAL_SELECTORS : MJ_SELECTORS).map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => applySelector(item)}
+                                            className={`
+                                                p-3 rounded-lg text-left transition-all group border
+                                                ${activeModal === 'mas' 
+                                                    ? 'bg-slate-800 hover:bg-blue-900/20 border-slate-700 hover:border-blue-500' 
+                                                    : 'bg-slate-800 hover:bg-purple-900/20 border-slate-700 hover:border-purple-500'}
+                                            `}
+                                        >
+                                            <span className={`block text-sm font-bold text-slate-200 ${activeModal === 'mas' ? 'group-hover:text-blue-300' : 'group-hover:text-purple-300'}`}>
+                                                {item.label}
+                                            </span>
+                                            <span className="block text-[10px] font-mono text-slate-500 mt-1">Grp: {item.group}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<SpriteStudio />);
+    </script>
+</body>
+</html>
