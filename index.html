@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAS Helper Studio - Sprite JSON Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2a8886;
+            --secondary-color: #b89878;
+            --accent-color: #ff6b9d;
+            --bg-dark: #1a1a1a;
+            --bg-light: #f5f5f5;
+            --text-primary: #333;
+            --text-light: #666;
+            --border-color: #ddd;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --error: #e74c3c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1em;
+            color: var(--secondary-color);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--primary-color);
+        }
+
+        .card h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            font-size: 1.3em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95em;
+        }
+
+        .label-required::after {
+            content: " *";
+            color: var(--error);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(42, 136, 134, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background: #217e7c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(42, 136, 134, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-secondary:hover {
+            background: #a88765;
+            transform: translateY(-2px);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9em;
+            flex: none;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-success:hover {
+            background: #1e8449;
+            transform: translateY(-2px);
+        }
+
+        .output-section {
+            background: #f8f8f8;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px dashed var(--border-color);
+            margin-top: 20px;
+            min-height: 150px;
+        }
+
+        .output-section h3 {
+            color: var(--text-primary);
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .json-display {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.4;
+        }
+
+        .json-display code {
+            color: var(--text-primary);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .alert-info {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-icon {
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            color: var(--text-light);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .guide-section {
+            background: #f0f8ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .guide-section h4 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .guide-section code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: var(--error);
+        }
+
+        .guide-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .guide-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .guide-list li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .pose-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .pose-input {
+            padding: 8px;
+            font-size: 0.85em;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .copy-btn {
+            background: var(--primary-color);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #217e7c;
+        }
+
+        .copy-btn.copied {
+            background: var(--success);
+        }
+
+        .download-section {
+            background: #d4edda;
+            border: 2px solid var(--success);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .download-section.show {
+            display: block;
+        }
+
+        .download-info {
+            font-size: 0.9em;
+            color: #155724;
+            margin-bottom: 10px;
+        }
+
+        .zip-contents {
+            background: white;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.85em;
+        }
+
+        .zip-contents ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .zip-contents li {
+            margin: 4px 0;
+            color: #155724;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .comparison-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .comparison-item strong {
+            color: var(--primary-color);
+        }
+
+        .section-divider {
+            border-top: 2px solid #e0e0e0;
+            margin: 20px 0;
+            padding-top: 20px;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-item input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 400;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 MAS Helper Studio v2.0</h1>
+            <p>Generador profesional de JSONs para Monika After Story</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- LEFT: Formulario -->
+            <div>
+                <div class="card">
+                    <h2><span class="card-icon">📝</span> Información General</h2>
+                    
+                    <div class="form-group">
+                        <label for="spriteType" class="label-required">Tipo de Sprite</label>
+                        <select id="spriteType" onchange="updateGuide()">
+                            <option value="">-- Selecciona tipo --</option>
+                            <option value="acs">Accesorio (ACS)</option>
+                            <option value="clothes">Ropa (Clothes)</option>
+                            <option value="hair">Cabello (Hair)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="spriteId" class="label-required">ID del Sprite</label>
+                            <input type="text" id="spriteId" placeholder="ej: my_custom_ribbon" oninput="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="author">Autor</label>
+                            <input type="text" id="author" placeholder="Tu nombre" oninput="updatePreview()">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="giftName">Nombre del Regalo</label>
+                            <input type="text" id="giftName" placeholder="ej: my_ribbon" oninput="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="displayName" class="label-required">Nombre Visible</label>
+                            <input type="text" id="displayName" placeholder="ej: Cute Ribbon" oninput="updatePreview()">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Descripción/Diálogo</label>
+                        <textarea id="description" placeholder="Descripción del item o diálogo al seleccionar" oninput="updatePreview()"></textarea>
+                    </div>
+
+                    <div id="spriteGuide" class="guide-section" style="display: none;">
+                        <h4>📋 Guía de Nomenclatura</h4>
+                        <div id="guideContent"></div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <h2><span class="card-icon">⚙️</span> Configuración Específica</h2>
+                    
+                    <div id="acsConfig" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="recLayer">Recommended Layer</label>
+                                <select id="recLayer" onchange="updatePreview()">
+                                    <option value="6">PST (6)</option>
+                                    <option value="8">BSE (8)</option>
+                                    <option value="9">ASE (9)</option>
+                                    <option value="10">PRE (10)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="acsPriority">Priority</label>
+                                <input type="number" id="acsPriority" value="10" min="1" oninput="updatePreview()">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="acsType">Tipo ACS</label>
+                            <input type="text" id="acsType" placeholder="ej: ribbon, bow, choker, etc." oninput="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="muxType">Conflictos (separado por comas)</label>
+                            <input type="text" id="muxType" placeholder="ej: ribbon, bow" oninput="updatePreview()">
+                        </div>
+                    </div>
+
+                    <div id="clothesConfig" style="display: none;">
+                        <div class="form-group">
+                            <label for="outfitHair">Cabello Outfit (opcional)</label>
+                            <input type="text" id="outfitHair" placeholder="ej: hair_id" oninput="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="outfitAcs">ACS Outfit (opcional, separado por comas)</label>
+                            <input type="text" id="outfitAcs" placeholder="ej: acs1, acs2, acs3" oninput="updatePreview()">
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <label style="font-weight: 600; margin-bottom: 10px; display: block;">Propiedades Especiales</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="prop_pajamas" onchange="updatePreview()">
+                                    <label for="prop_pajamas">Pajamas</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="prop_no_bracelet" onchange="updatePreview()">
+                                    <label for="prop_no_bracelet">Sin Pulsera</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="prop_bare_shoulder" onchange="updatePreview()">
+                                    <label for="prop_bare_shoulder">Hombro descubierto</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="hairConfig" style="display: none;">
+                        <div class="checkbox-item" style="margin-top: 10px;">
+                            <input type="checkbox" id="hair_ribbon" onchange="updatePreview()">
+                            <label for="hair_ribbon">Tiene Ribbon</label>
+                        </div>
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">Pose Map (p1-p7)</label>
+                    <div class="pose-grid">
+                        <input type="text" class="pose-input" id="p1" placeholder="p1: steepling" oninput="updatePreview()">
+                        <input type="text" class="pose-input" id="p2" placeholder="p2: crossed" oninput="updatePreview()">
+                        <input type="text" class="pose-input" id="p3" placeholder="p3: rest-left" oninput="updatePreview()">
+                        <input type="text" class="pose-input" id="p4" placeholder="p4: point" oninput="updatePreview()">
+                        <input type="text" class="pose-input" id="p5" placeholder="p5: leaning" oninput="updatePreview()">
+                        <input type="text" class="pose-input" id="p6" placeholder="p6: down" oninput="updatePreview()">
+                        <input type="text" class="pose-input" id="p7" placeholder="p7: down-left" oninput="updatePreview()">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" onclick="generateJSON()">📊 Generar JSON</button>
+                    <button class="btn-success" onclick="downloadZip()" style="display:none;" id="downloadBtn">📦 Descargar ZIP</button>
+                    <button class="btn-secondary" onclick="resetForm()">🔄 Limpiar</button>
+                </div>
+
+                <div id="downloadSection" class="download-section">
+                    <div class="download-info">
+                        ✓ Estructura lista para descargar. Contiene:
+                    </div>
+                    <div class="zip-contents">
+                        <ul>
+                            <li><strong>characters/demo.gift</strong> - Archivo gift</li>
+                            <li><strong>game/mod_assets/thumbs/demo.png</strong> - Thumbnail</li>
+                            <li><strong>game/mod_assets/monika/c/demo/</strong> - Carpeta para sprites</li>
+                            <li><strong>game/mod_assets/monika/j/demo.json</strong> - JSON configuración</li>
+                            <li><strong>Documentación</strong> - Guías de instalación</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Preview & Salida -->
+            <div>
+                <div class="card">
+                    <h2><span class="card-icon">👁️</span> Vista Previa</h2>
+
+                    <div class="tab-container">
+                        <button class="tab-btn active" onclick="switchTab('preview')">Resumen</button>
+                        <button class="tab-btn" onclick="switchTab('json')">JSON</button>
+                        <button class="tab-btn" onclick="switchTab('validation')">Validación</button>
+                    </div>
+
+                    <div id="preview" class="tab-content active">
+                        <div id="previewContent">
+                            <p style="color: var(--text-light); text-align: center; padding: 40px 20px;">
+                                Completa el formulario para ver la vista previa
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="json" class="tab-content">
+                        <div class="output-section">
+                            <div id="jsonOutput" class="json-display">
+                                { /* JSON aparecerá aquí */ }
+                            </div>
+                            <button class="copy-btn btn-small" onclick="copyToClipboard()">📋 Copiar JSON</button>
+                        </div>
+                    </div>
+
+                    <div id="validation" class="tab-content">
+                        <div id="validationOutput">
+                            <p style="color: var(--text-light); text-align: center; padding: 20px;">
+                                Genera un JSON para ver validación
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <h2><span class="card-icon">📁</span> Estructura de Carpetas</h2>
+                    
+                    <div class="guide-section">
+                        <h4>Nueva estructura MAS v2.0:</h4>
+                        <div style="background: white; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.85em; line-height: 1.6;">
+                            <div>Demo/</div>
+                            <div style="padding-left: 20px;">characters/</div>
+                            <div style="padding-left: 40px;">├─ demo.gift</div>
+                            <div style="padding-left: 20px;">game/mod_assets/</div>
+                            <div style="padding-left: 40px;">├─ thumbs/</div>
+                            <div style="padding-left: 60px;">│  └─ demo.png</div>
+                            <div style="padding-left: 40px;">├─ monika/c/demo/</div>
+                            <div style="padding-left: 60px;">│  └─ [imagenes]</div>
+                            <div style="padding-left: 40px;">└─ monika/j/</div>
+                            <div style="padding-left: 60px;">   └─ demo.json</div>
+                        </div>
+                    </div>
+
+                    <div class="guide-section">
+                        <h4>📌 Referencias de Layers:</h4>
+                        <div class="comparison-grid">
+                            <div class="comparison-item">
+                                <strong>0:</strong> Body base
+                            </div>
+                            <div class="comparison-item">
+                                <strong>1:</strong> Body adicional
+                            </div>
+                            <div class="comparison-item">
+                                <strong>5:</strong> Arms mid
+                            </div>
+                            <div class="comparison-item">
+                                <strong>10:</strong> Arms front
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>MAS Helper Studio v2.0 | Creado para la comunidad de Monika After Story</p>
+    </footer>
+
+    <script>
+        let currentJSON = {};
+        let lastAssetType = '';
+        let lastAssetId = '';
+
+        function updateGuide() {
+            const type = document.getElementById('spriteType').value;
+            const guideSection = document.getElementById('spriteGuide');
+            const guideContent = document.getElementById('guideContent');
+            const acsConfig = document.getElementById('acsConfig');
+            const clothesConfig = document.getElementById('clothesConfig');
+            const hairConfig = document.getElementById('hairConfig');
+
+            // Reset visibilities
+            acsConfig.style.display = 'none';
+            clothesConfig.style.display = 'none';
+            hairConfig.style.display = 'none';
+            guideSection.style.display = 'none';
+
+            if (!type) return;
+
+            guideSection.style.display = 'block';
+
+            if (type === 'acs') {
+                guideContent.innerHTML = `
+                    <p><strong>Archivos ACS (Accesorios):</strong></p>
+                    <ul class="guide-list">
+                        <li><code>{id}-p1.png</code> a <code>{id}-p7.png</code> - Una imagen por pose</li>
+                        <li><code>{id}-def.png</code> - Misma imagen para todas las poses</li>
+                        <li><code>{id}-5.png</code> - Layer específica (5 = arms mid)</li>
+                        <li><code>{id}-0^5^10.png</code> - Múltiples layers</li>
+                    </ul>
+                    <p style="margin-top: 10px;"><strong>Ubicación:</strong> game/mod_assets/monika/c/{id}/</p>
+                `;
+                acsConfig.style.display = 'block';
+            } else if (type === 'clothes') {
+                guideContent.innerHTML = `
+                    <p><strong>Archivos CLOTHES (Ropa):</strong></p>
+                    <ul class="guide-list">
+                        <li><code>{id}-0.png</code> - Cuerpo base</li>
+                        <li><code>{id}-1.png</code> - Cuerpo adicional</li>
+                        <li><code>{id}-def-0.png</code> - Pose inclinada, layer 0</li>
+                        <li><code>{id}-def-1.png</code> - Pose inclinada, layer 1</li>
+                    </ul>
+                    <p style="margin-top: 10px;"><strong>Ubicación:</strong> game/mod_assets/monika/c/{id}/</p>
+                `;
+                clothesConfig.style.display = 'block';
+            } else if (type === 'hair') {
+                guideContent.innerHTML = `
+                    <p><strong>Archivos HAIR (Cabello):</strong></p>
+                    <ul class="guide-list">
+                        <li><code>{id}-back.png</code> - Layer trasera</li>
+                        <li><code>{id}-mid.png</code> - Layer media</li>
+                        <li><code>{id}-front.png</code> - Layer frontal</li>
+                        <li><code>{id}-def-back.png</code> - Leaning pose</li>
+                    </ul>
+                    <p style="margin-top: 10px;"><strong>Ubicación:</strong> game/mod_assets/monika/c/{id}/</p>
+                `;
+                hairConfig.style.display = 'block';
+            }
+
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const type = document.getElementById('spriteType').value;
+            const id = document.getElementById('spriteId').value;
+            const displayName = document.getElementById('displayName').value;
+
+            const previewContent = document.getElementById('previewContent');
+
+            if (!type || !id) {
+                previewContent.innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 40px 20px;">⚠️ Completa los campos obligatorios</p>';
+                return;
+            }
+
+            let statusClass = 'status-warning';
+            let statusText = '⚠️ Incompleto';
+
+            if (displayName) {
+                statusClass = 'status-success';
+                statusText = '✓ Listo para generar';
+            }
+
+            const typeLabel = {acs: 'Accesorio', clothes: 'Ropa', hair: 'Cabello'}[type];
+
+            previewContent.innerHTML = `
+                <div>
+                    <p><strong>Tipo:</strong> ${typeLabel}</p>
+                    <p><strong>ID:</strong> <code>${id}</code></p>
+                    <p><strong>Display Name:</strong> ${displayName || '<em>No definido</em>'}</p>
+                    <p><strong>Autor:</strong> ${document.getElementById('author').value || '<em>No definido</em>'}</p>
+                    <p style="margin-top: 15px;"><strong>Ubicación carpeta:</strong></p>
+                    <code style="background: #f0f0f0; padding: 8px; display: block; border-radius: 4px;">
+                        game/mod_assets/monika/c/${id}/
+                    </code>
+                    <p style="margin-top: 15px;"><strong>Ubicación JSON:</strong></p>
+                    <code style="background: #f0f0f0; padding: 8px; display: block; border-radius: 4px;">
+                        game/mod_assets/monika/j/${id}.json
+                    </code>
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                </div>
+            `;
+        }
+
+        function generateJSON() {
+            const type = document.getElementById('spriteType').value;
+            
+            if (!type) {
+                alert('❌ Selecciona un tipo de sprite');
+                return;
+            }
+
+            if (!document.getElementById('spriteId').value || !document.getElementById('displayName').value) {
+                alert('❌ Completa los campos obligatorios (ID y Display Name)');
+                return;
+            }
+
+            const json = buildJSON(type);
+            currentJSON = json;
+            lastAssetType = type;
+            lastAssetId = document.getElementById('spriteId').value;
+
+            document.getElementById('jsonOutput').textContent = JSON.stringify(json, null, 2);
+            validateJSON(json);
+            
+            document.getElementById('downloadBtn').style.display = 'inline-flex';
+            document.getElementById('downloadSection').classList.add('show');
+            
+            switchTab('json');
+        }
+
+        function buildJSON(type) {
+            const id = document.getElementById('spriteId').value;
+            const base = {
+                "__author": document.getElementById('author').value || "Unknown",
+                "version": 3,
+                "name": id,
+                "img_sit": id
+            };
+
+            if (type === 'acs') {
+                base.type = 0;
+                base.pose_map = {
+                    "mpm_type": 0,
+                    "p1": document.getElementById('p1').value || "0",
+                    "p2": document.getElementById('p2').value || "0",
+                    "p3": document.getElementById('p3').value || "0",
+                    "p4": document.getElementById('p4').value || "0",
+                    "p5": document.getElementById('p5').value || "0",
+                    "p6": document.getElementById('p6').value || "0",
+                    "p7": document.getElementById('p7').value || "0"
+                };
+                base.rec_layer = parseInt(document.getElementById('recLayer').value);
+                base.acs_type = document.getElementById('acsType').value || "accessory";
+                base.stay_on_start = true;
+                base.priority = parseInt(document.getElementById('acsPriority').value);
+                
+                if (document.getElementById('muxType').value) {
+                    base.mux_type = document.getElementById('muxType').value.split(',').map(s => s.trim());
+                }
+            } else if (type === 'clothes') {
+                base.type = 2;
+                base.pose_map = { "mpm_type": 0 };
+                base.stay_on_start = true;
+                base.pose_arms = {
+                    "crossed": {"tag": "crossed", "layers": "5^10"},
+                    "left-down": {"tag": "down", "layers": "0"},
+                    "left-rest": {"tag": "rest", "layers": "10"},
+                    "right-down": {"tag": "down", "layers": "0"},
+                    "right-point": {"tag": "point", "layers": "0"},
+                    "right-restpoint": {"tag": "restpoint", "layers": "10"},
+                    "steepling": {"tag": "steepling", "layers": "10"}
+                };
+                
+                const exProps = {};
+                if (document.getElementById('prop_pajamas').checked) exProps.pajamas = true;
+                if (document.getElementById('prop_no_bracelet').checked) exProps["no bracelet"] = true;
+                if (document.getElementById('prop_bare_shoulder').checked) exProps["bare-right-shoulder"] = true;
+                
+                if (Object.keys(exProps).length > 0) {
+                    base.ex_props = exProps;
+                }
+                
+                if (document.getElementById('outfitHair').value) {
+                    base.outfit_hair = document.getElementById('outfitHair').value;
+                }
+                if (document.getElementById('outfitAcs').value) {
+                    base.outfit_acs = document.getElementById('outfitAcs').value.split(',').map(s => s.trim());
+                }
+            } else if (type === 'hair') {
+                base.type = 1;
+                base.pose_map = { "mpm_type": 0, "default": true };
+                base.stay_on_start = true;
+                base.unlock = true;
+                
+                const exProps = {};
+                if (document.getElementById('hair_ribbon').checked) exProps.ribbon = true;
+                if (Object.keys(exProps).length > 0) {
+                    base.ex_props = exProps;
+                }
+            }
+
+            base.select_info = {
+                "display_name": document.getElementById('displayName').value,
+                "thumb": id,
+                "group": type
+            };
+
+            if (document.getElementById('giftName').value) {
+                base.giftname = document.getElementById('giftName').value;
+            }
+
+            if (document.getElementById('description').value) {
+                base.dlg_desc = document.getElementById('description').value;
+            }
+
+            return base;
+        }
+
+        function validateJSON(json) {
+            const output = document.getElementById('validationOutput');
+            let html = '<div style="padding: 15px;">';
+
+            const checks = [
+                { pass: !!json.__author, msg: '✓ Autor definido', type: 'success' },
+                { pass: !!json.version, msg: '✓ Versión definida', type: 'success' },
+                { pass: json.type !== undefined, msg: '✓ Tipo definido', type: 'success' },
+                { pass: !!json.name, msg: '✓ Name (ID) definido', type: 'success' },
+                { pass: !!json.img_sit, msg: '✓ img_sit definido', type: 'success' },
+                { pass: !!json.pose_map, msg: '✓ pose_map definido', type: 'success' },
+                { pass: !!json.select_info, msg: '✓ select_info definido', type: 'success' },
+                { pass: json.giftname ? true : false, msg: json.giftname ? '✓ giftname definido' : '⚠️ Sin giftname (opcional)', type: json.giftname ? 'success' : 'warning' },
+                { pass: json.dlg_desc ? true : false, msg: json.dlg_desc ? '✓ Descripción definida' : '⚠️ Sin descripción (opcional)', type: json.dlg_desc ? 'success' : 'warning' }
+            ];
+
+            checks.forEach(check => {
+                const alertClass = check.type === 'success' ? 'alert-info' : 'alert-warning';
+                html += `<div class="alert ${alertClass}"><span class="alert-icon">ℹ️</span><span>${check.msg}</span></div>`;
+            });
+
+            html += '</div>';
+            output.innerHTML = html;
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tab).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function copyToClipboard() {
+            const json = document.getElementById('jsonOutput').textContent;
+            navigator.clipboard.writeText(json).then(() => {
+                const btn = event.target;
+                btn.textContent = '✓ ¡Copiado!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '📋 Copiar JSON';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        function resetForm() {
+            document.querySelectorAll('input, select, textarea').forEach(el => {
+                if (el.type === 'number') el.value = '10';
+                else if (el.type === 'checkbox') el.checked = false;
+                else el.value = '';
+            });
+            document.getElementById('previewContent').innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 40px 20px;">Completa el formulario para ver la vista previa</p>';
+            document.getElementById('jsonOutput').textContent = '{ /* JSON aparecerá aquí */ }';
+            document.getElementById('validationOutput').innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 20px;">Genera un JSON para ver validación</p>';
+            document.getElementById('downloadBtn').style.display = 'none';
+            document.getElementById('downloadSection').classList.remove('show');
+            currentJSON = {};
+        }
+
+        async function downloadZip() {
+            if (!currentJSON || Object.keys(currentJSON).length === 0) {
+                alert('❌ Primero genera un JSON');
+                return;
+            }
+
+            try {
+                const zip = new JSZip();
+                const assetType = lastAssetType;
+                const assetId = lastAssetId;
+
+                // 1. Crear estructura de carpetas
+                zip.folder(`${assetId}/characters`);
+                zip.folder(`${assetId}/game/mod_assets/thumbs`);
+                zip.folder(`${assetId}/game/mod_assets/monika/c/${assetId}`);
+                zip.folder(`${assetId}/game/mod_assets/monika/j`);
+
+                // 2. Agregar JSON a la ubicación correcta
+                const jsonContent = JSON.stringify(currentJSON, null, 2);
+                zip.file(`${assetId}/game/mod_assets/monika/j/${assetId}.json`, jsonContent);
+
+                // 3. Crear archivo gift vacío
+                const giftContent = `# ${assetId}.gift file\n# This file is used by Monika After Story\n`;
+                zip.file(`${assetId}/characters/${assetId}.gift`, giftContent);
+
+                // 4. Crear placeholder para thumbnail
+                const thumbNote = `Coloca aquí tu imagen PNG de thumbnail\nNombre: ${assetId}.png\nTamaño recomendado: 244x244 px`;
+                zip.file(`${assetId}/game/mod_assets/thumbs/README_THUMBNAIL.txt`, thumbNote);
+
+                // 5. Crear placeholder para sprites
+                const spritesNote = `Coloca aquí tus archivos PNG de sprites\nPara ${assetType}:\n${generatePNGNamesGuide(assetType, assetId)}`;
+                zip.file(`${assetId}/game/mod_assets/monika/c/${assetId}/README_SPRITES.txt`, spritesNote);
+
+                // 6. Guía completa
+                const guide = generateCompleteGuide(assetType, assetId);
+                zip.file(`${assetId}/INSTALACION.txt`, guide);
+
+                // 7. README estructura
+                const structureGuide = generateStructureGuide(assetType, assetId);
+                zip.file(`${assetId}/ESTRUCTURA.txt`, structureGuide);
+
+                // Generar ZIP y descargar
+                const content = await zip.generateAsync({type: "blob"});
+                const url = URL.createObjectURL(content);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${assetId}_MAS_${new Date().getTime()}.zip`;
+                link.click();
+                URL.revokeObjectURL(url);
+
+                alert('✓ ZIP descargado exitosamente\n\nExtrae y sigue las instrucciones en INSTALACION.txt');
+            } catch (error) {
+                alert('❌ Error al generar ZIP: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function generatePNGNamesGuide(type, id) {
+            let guide = '';
+            if (type === 'acs') {
+                guide = `
+${id}-p1.png
+${id}-p2.png
+${id}-p3.png
+${id}-p4.png
+${id}-p5.png
+${id}-p6.png
+${id}-p7.png
+O si es igual para todas:
+${id}-def.png
+                `;
+            } else if (type === 'clothes') {
+                guide = `
+${id}-0.png
+${id}-1.png
+${id}-def-0.png
+${id}-def-1.png
+                `;
+            } else if (type === 'hair') {
+                guide = `
+${id}-back.png
+${id}-mid.png
+${id}-front.png
+${id}-def-back.png (opcional)
+                `;
+            }
+            return guide;
+        }
+
+        function generateCompleteGuide(type, id) {
+            return `GUÍA DE INSTALACIÓN - ${type.toUpperCase()}
+${'='.repeat(70)}
+
+ESTRUCTURA GENERADA:
+${'-'.repeat(70)}
+${id}/
+├── characters/${id}.gift
+├── game/
+│   └── mod_assets/
+│       ├── thumbs/${id}.png
+│       └── monika/
+│           ├── c/${id}/ (sprites aquí)
+│           └── j/${id}.json
+└── INSTALACION.txt (este archivo)
+
+PASOS DE INSTALACIÓN:
+${'-'.repeat(70)}
+
+1. DESEMPACA EL ZIP
+   Extrae este archivo en tu PC
+
+2. AGREGAR THUMBNAIL
+   • Coloca tu imagen ${id}.png en: ${id}/game/mod_assets/thumbs/
+   • Tamaño recomendado: 244x244 px
+   • Formato: PNG con transparencia
+
+3. AGREGAR SPRITES
+   • Coloca tus imágenes PNG en: ${id}/game/mod_assets/monika/c/${id}/
+   • Nombres deben coincidir exactamente (mayúsculas/minúsculas importan)
+   • Formato: PNG con transparencia
+   • Resolución: 1280x1224 px (estándar)
+
+4. COPIAR AL MOD DE MAS
+   • Copia la carpeta ${id}/ a tu instalación de MAS
+   • O copia solo los archivos a sus ubicaciones correspondientes
+
+5. VERIFICAR EN EL JUEGO
+   • Abre Monika After Story
+   • El item debería aparecer en el menú
+   • Si hay problemas, revisa nombres de archivos
+
+ESTRUCTURA DENTRO DE TU MOD:
+${'-'.repeat(70)}
+game/mod_assets/monika/c/${id}/
+    ├── ${id}-p1.png
+    ├── ${id}-p2.png
+    └── ... (más archivos según tipo)
+
+game/mod_assets/monika/j/
+    └── ${id}.json
+
+game/mod_assets/thumbs/
+    └── ${id}.png
+
+ERRORES COMUNES:
+${'-'.repeat(70)}
+• PNG no aparece → Verifica el nombre (caso sensible)
+• Error en JSON → Compara con el archivo generado
+• Ruta incorrecta → Revisa ESTRUCTURA.txt
+• Resolución incorrecta → Redimensiona a 1280x1224
+
+SOPORTE Y DOCUMENTACIÓN:
+${'-'.repeat(70)}
+• GitHub: Monika-After-Story/MonikaModDev
+• Discord: Comunidad oficial de MAS
+• Wiki: https://github.com/Monika-After-Story/MonikaModDev/wiki
+
+Generado con MAS Helper Studio v2.0
+${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}
+`;
+        }
+
+        function generateStructureGuide(type, id) {
+            return `ESTRUCTURA ESTÁNDAR MAS v2.0
+${'='.repeat(70)}
+
+UBICACIONES REQUERIDAS:
+${'-'.repeat(70)}
+
+1. ARCHIVO GIFT:
+   characters/${id}.gift
+   (Archivo de configuración del regalo)
+
+2. THUMBNAIL/VISTA PREVIA:
+   game/mod_assets/thumbs/${id}.png
+   - Tamaño: 244x244 px
+   - Formato: PNG
+
+3. SPRITES (Imágenes):
+   game/mod_assets/monika/c/${id}/
+   - Contiene todos los PNG
+   - Nombres por tipo (ver INSTALACION.txt)
+
+4. JSON (Configuración):
+   game/mod_assets/monika/j/${id}.json
+   - Archivo de configuración ya generado
+
+CARPETA COMPLETA:
+${'-'.repeat(70)}
+
+${id}/
+├── characters/
+│   └── ${id}.gift
+├── game/
+│   └── mod_assets/
+│       ├── thumbs/
+│       │   └── ${id}.png
+│       └── monika/
+│           ├── c/
+│           │   └── ${id}/
+│           │       ├── ${id}-p1.png
+│           │       ├── ${id}-p2.png
+│           │       └── ... (más sprites)
+│           └── j/
+│               └── ${id}.json
+└── INSTALACION.txt
+
+
+NOMBRES DE ARCHIVOS POR TIPO:
+${'-'.repeat(70)}
+
+ACS (Accesorios):
+    ${id}-p1.png, ${id}-p2.png, ..., ${id}-p7.png
+    O: ${id}-def.png (si es igual para todas)
+
+CLOTHES (Ropa):
+    ${id}-0.png, ${id}-1.png
+    ${id}-def-0.png, ${id}-def-1.png
+
+HAIR (Cabello):
+    ${id}-back.png, ${id}-mid.png, ${id}-front.png
+    ${id}-def-back.png (opcional)
+
+
+VERIFICACIÓN ANTES DE INSTALAR:
+${'-'.repeat(70)}
+□ gift file existe
+□ Thumbnail PNG existe y tiene tamaño correcto
+□ Sprites PNG existen y tienen nombres correctos
+□ JSON existe en ubicación correcta
+□ Todos los archivos tienen extensión correcta (.png, .json, .gift)
+
+
+Generado con MAS Helper Studio v2.0
+`;
+        }
+    </script>
+</body>
+</html>
